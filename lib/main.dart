@@ -8,6 +8,10 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_database/ui/firebase_animated_list.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:math';
+import 'dart:io';
 
 final googleSignIn = new GoogleSignIn();
 final analytics = new FirebaseAnalytics();
@@ -115,6 +119,13 @@ class ChatScreenState extends State<ChatScreen> {
           // 한 row에 들어갈 widget들을 배열로 정의 한다.
           children: <Widget>[
             // 다른 widget이 쓰고 남은 크기를 재사용 하도록 Flexible 위젯으로 만든다
+            new Container (
+              margin: new EdgeInsets.symmetric(horizontal: 4.0),
+              child: new IconButton(
+                icon: new Icon(Icons.photo_camera),
+                onPressed: _handlePhoto, 
+              )
+            ),
             new Flexible(
               child: new TextField(
                 controller: _textController, // text 변화 받아 들일 컨트롤러
@@ -144,6 +155,15 @@ class ChatScreenState extends State<ChatScreen> {
       )
     );
   }
+  void _handlePhoto() async {
+    await _ensureLoggedIn();
+    File imageFile = await ImagePicker.pickImage();
+    int random = new Random().nextInt(100000);
+    StorageReference ref = FirebaseStorage.instance.ref().child("image_$random.jpg");
+    StorageUploadTask uploadTask = ref.putFile(imageFile);
+    Uri downloadUrl = await ref.getDownloadURL();
+    _sendMessage(imageUrl: downloadUrl.toString());
+  }
   void _handleChange(String text) {
     setState(() {
       _isComposing = text.length > 0;
@@ -159,9 +179,10 @@ class ChatScreenState extends State<ChatScreen> {
     _sendMessage(text: text);
     // 메시지 리스트에 추가할 새로운 메시지 위젯 생성
   }
-  void _sendMessage({ String text}) {
+  void _sendMessage({ String text, String imageUrl }) {
     reference.push().set({
       'text': text,
+      'imageUrl': imageUrl,
       'senderName': googleSignIn.currentUser.displayName,
       'senderPhotoUrl': googleSignIn.currentUser.photoUrl,
     });

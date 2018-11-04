@@ -87,4 +87,5 @@ subprojects {
 #### Goolge Signin 사용을 위한 디지털 지문 등록
 
 [이 문서](https://developer.android.com/studio/publish/app-signing?hl=ko) 와
-[이 문서](https://developers.google.com/android/guides/client-auth?hl=ko) 참조
+[이 문서](https://developers.google.com/android/guides/client-auth?hl=ko) 참조해서
+반드시 `SHA-1` 값을 등록하도록 합니다.
