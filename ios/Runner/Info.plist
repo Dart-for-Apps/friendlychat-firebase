@@ -57,5 +57,7 @@
 	<string>Share images with other chat users</string> 
 	<key>NSPhotoLibraryUsageDescription</key> 
 	<string>Share images with other chat users</string> 
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Share voices with other chat users</string>
 </dict>
 </plist>

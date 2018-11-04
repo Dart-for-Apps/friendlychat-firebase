@@ -157,12 +157,14 @@ class ChatScreenState extends State<ChatScreen> {
   }
   void _handlePhoto() async {
     await _ensureLoggedIn();
-    File imageFile = await ImagePicker.pickImage();
+    File imageFile = await ImagePicker.pickImage(
+      source: ImageSource.gallery,
+    );
     int random = new Random().nextInt(100000);
     StorageReference ref = FirebaseStorage.instance.ref().child("image_$random.jpg");
     StorageUploadTask uploadTask = ref.putFile(imageFile);
-    Uri downloadUrl = await ref.getDownloadURL();
-    _sendMessage(imageUrl: downloadUrl.toString());
+    String downloadUrl = await (await uploadTask.onComplete).ref.getDownloadURL();
+    _sendMessage(imageUrl: downloadUrl);
   }
   void _handleChange(String text) {
     setState(() {
