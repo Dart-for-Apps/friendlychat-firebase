@@ -46,15 +46,16 @@ class ChatScreen extends StatefulWidget {
   }
 }
 
-class ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
+class ChatScreenState extends State<ChatScreen> {
   // text field 와 연계하여, 매 텍스트 업데이트 마다
   // 업데이트 된 텍스트와 선택된 텍스트를 조정함. 초기값도 설정 가능
   final TextEditingController _textController = new TextEditingController();
 
   // 채팅 메시지 표기를 위한 부분
-  final List<ChatMessage> _messages = <ChatMessage>[];
   bool _isComposing = false;
 
+  // firebase 에서 메시지 가져오기
+  final reference = FirebaseDatabase.instance.reference().child('messages');
   // 커스텀
   final _focusNode = new FocusNode();
   @override
@@ -75,15 +76,23 @@ class ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
             )
           ): null,
         child: new Column(children: <Widget>[
+          // 채팅 내용 부분
           new Flexible(
-            child: new ListView.builder(
+            child: new FirebaseAnimatedList(
+              query: reference,
+              sort: (a, b) => b.key.compareTo(a.key),
               padding: new EdgeInsets.all(8.0),
-              reverse: true, // 시간 역순으로 출력하기 위한 도구
-              itemBuilder: (_, int index) => _messages[index],
-              itemCount: _messages.length,
-            ),
+              reverse: true,
+              itemBuilder: (_, DataSnapshot snapshot, Animation<double> animation, int idx){
+                return new ChatMessage(
+                  snapshot: snapshot,
+                  animation: animation,
+                );
+              },  
+            )
           ),
           new Divider(height: 1.0),
+          // 채팅 입력 부분
           new Container(
             decoration: new BoxDecoration(
               color: Theme.of(context).cardColor,
@@ -150,29 +159,12 @@ class ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     _sendMessage(text: text);
     // 메시지 리스트에 추가할 새로운 메시지 위젯 생성
   }
-  @override
-  void dispose() {
-    // TODO: implement dispose
-    for (ChatMessage message in _messages) {
-      message.animationController.dispose();
-    }
-    super.dispose();
-  }
   void _sendMessage({ String text}) {
-    ChatMessage message = new ChatMessage(
-      text: text, 
-      animationController: new AnimationController(
-        duration: new Duration(milliseconds: 700),
-        vsync: this,
-      ),
-      photoUrl: googleSignIn.currentUser.photoUrl,
-      name: googleSignIn.currentUser.displayName,
-    );
-    // setState() 호출을 통해 rendering 하도록 
-    setState(() {
-      _messages.insert(0, message);
+    reference.push().set({
+      'text': text,
+      'senderName': googleSignIn.currentUser.displayName,
+      'senderPhotoUrl': googleSignIn.currentUser.photoUrl,
     });
-    message.animationController.forward();
     analytics.logEvent(name: 'send_message');
   }
 
@@ -181,11 +173,11 @@ class ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
     GoogleSignInAccount user = googleSignIn.currentUser;
     if (user == null) {
       user = await googleSignIn.signInSilently();
-      if (user == null) {
-        await googleSignIn.signIn();
-        analytics.logLogin();
-      } 
     }
+    if (user == null) {
+      await googleSignIn.signIn();
+      analytics.logLogin();
+    } 
 
     if (await auth.currentUser() == null) {
       GoogleSignInAuthentication credentials =
