@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'message.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:async';
 
+final googleSignIn = new GoogleSignIn();
 void main() {
   runApp(
     new FriendlychatApp()
@@ -131,25 +134,15 @@ class ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       _isComposing = text.length > 0;
     });
   }
-  void _handleSubmitted(String text) {
+  void _handleSubmitted(String text) async {
     _textController.clear();
     setState(() {
           _isComposing = false;
         });
     FocusScope.of(context).requestFocus(_focusNode);
+    await _ensureLoggedIn();
+    _sendMessage(text: text);
     // 메시지 리스트에 추가할 새로운 메시지 위젯 생성
-    ChatMessage message = new ChatMessage(
-      text: text, 
-      animationController: new AnimationController(
-        duration: new Duration(milliseconds: 700),
-        vsync: this,
-      ),
-    );
-    // setState() 호출을 통해 rendering 하도록 
-    setState(() {
-      _messages.insert(0, message);
-    });
-    message.animationController.forward();
   }
   @override
   void dispose() {
@@ -158,5 +151,32 @@ class ChatScreenState extends State<ChatScreen> with TickerProviderStateMixin {
       message.animationController.dispose();
     }
     super.dispose();
+  }
+  void _sendMessage({ String text}) {
+    ChatMessage message = new ChatMessage(
+      text: text, 
+      animationController: new AnimationController(
+        duration: new Duration(milliseconds: 700),
+        vsync: this,
+      ),
+      photoUrl: googleSignIn.currentUser.photoUrl,
+      name: googleSignIn.currentUser.displayName,
+    );
+    // setState() 호출을 통해 rendering 하도록 
+    setState(() {
+      _messages.insert(0, message);
+    });
+    message.animationController.forward();
+  }
+
+  // 구글 로그인
+  Future<Null> _ensureLoggedIn() async {
+    GoogleSignInAccount user = googleSignIn.currentUser;
+    if (user == null) {
+      user = await googleSignIn.signInSilently();
+    }
+    if (user == null) {
+      await googleSignIn.signIn();
+    }
   }
 }
